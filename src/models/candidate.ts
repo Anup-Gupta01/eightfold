@@ -1,130 +1,115 @@
-import { z } from 'zod';
-
 // ---------------------------------------------------------------------------
-// Shared primitive schemas — reused across source-specific schemas
-// ---------------------------------------------------------------------------
-
-export const DateStringSchema = z.string().regex(
-  /^\d{4}-\d{2}-\d{2}$/,
-  'Date must be in YYYY-MM-DD format',
-);
-
-export const NonEmptyString = z.string().min(1).trim();
-
-// ---------------------------------------------------------------------------
-// Skill
+// candidate.ts
+// The canonical data model for a pipeline candidate.
+// Every source (CSV, resume, …) normalizes its data into this shape.
 // ---------------------------------------------------------------------------
 
-export const SkillSchema = z.object({
-  name: NonEmptyString,
-  yearsOfExperience: z.number().nonnegative().optional(),
-  proficiency: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
-});
+import type {
+  TaggedEmail,
+  TaggedPhone,
+  Location,
+  Skill,
+  WorkExperience,
+  Education,
+  SocialLink,
+} from './common';
 
-export type Skill = z.infer<typeof SkillSchema>;
-
-// ---------------------------------------------------------------------------
-// Work Experience
-// ---------------------------------------------------------------------------
-
-export const WorkExperienceSchema = z.object({
-  company: NonEmptyString,
-  title: NonEmptyString,
-  startDate: DateStringSchema.optional(),
-  endDate: DateStringSchema.optional().nullable(),
-  isCurrent: z.boolean().optional(),
-  description: z.string().optional(),
-  location: z.string().optional(),
-});
-
-export type WorkExperience = z.infer<typeof WorkExperienceSchema>;
+import type { ProvenanceRecord } from './provenance';
 
 // ---------------------------------------------------------------------------
-// Education
-// ---------------------------------------------------------------------------
-
-export const EducationSchema = z.object({
-  institution: NonEmptyString,
-  degree: z.string().optional(),
-  fieldOfStudy: z.string().optional(),
-  startDate: DateStringSchema.optional(),
-  endDate: DateStringSchema.optional().nullable(),
-  gpa: z.number().min(0).max(10).optional(),
-});
-
-export type Education = z.infer<typeof EducationSchema>;
-
-// ---------------------------------------------------------------------------
-// Candidate — the unified, normalized model used throughout the pipeline
+// Candidate — the single source of truth across the pipeline
 // ---------------------------------------------------------------------------
 
 export interface Candidate {
-  /** Globally unique identifier assigned by the pipeline (UUID v4) */
-  id: string;
+  /**
+   * Pipeline-assigned UUID v4.
+   * Assigned once at creation; never changes across updates.
+   */
+  candidateId: string;
 
-  // ── Identity ─────────────────────────────────────────────────────────────
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
+  // ── Identity ──────────────────────────────────────────────────────────────
 
-  // ── Location ─────────────────────────────────────────────────────────────
-  location?: {
-    city?: string;
-    state?: string;
-    country?: string;
-    postalCode?: string;
-  };
+  /** Best available full name, e.g. "Jane Doe" */
+  fullName: string;
 
-  // ── Professional profile ──────────────────────────────────────────────────
+  // ── Contact ───────────────────────────────────────────────────────────────
+
+  /**
+   * All known email addresses for this candidate.
+   * Duplicates are de-duped by normalized address (lowercase, trimmed).
+   */
+  emails: TaggedEmail[];
+
+  /**
+   * All known phone numbers.
+   * Duplicates are de-duped by normalized digits.
+   */
+  phones: TaggedPhone[];
+
+  // ── Location ──────────────────────────────────────────────────────────────
+
+  /** Primary location; may be partially populated. */
+  location?: Location;
+
+  // ── Professional summary ──────────────────────────────────────────────────
+
+  /** Short professional headline, e.g. "Senior Backend Engineer" */
   headline?: string;
-  summary?: string;
-  linkedinUrl?: string;
-  portfolioUrl?: string;
-  githubUrl?: string;
 
+  // ── Skills ────────────────────────────────────────────────────────────────
+
+  /** De-duped list of skills, ordered by name ascending after normalization */
   skills: Skill[];
+
+  // ── Work history ──────────────────────────────────────────────────────────
+
+  /** Chronologically descending list of work experiences */
   experience: WorkExperience[];
+
+  // ── Education ─────────────────────────────────────────────────────────────
+
+  /** Chronologically descending list of education entries */
   education: Education[];
 
+  // ── Online presence ───────────────────────────────────────────────────────
+
+  /** De-duped list of social/portfolio links */
+  socialLinks: SocialLink[];
+
   // ── Pipeline metadata ─────────────────────────────────────────────────────
-  /** Data source(s) that contributed to this record */
-  sources: DataSource[];
 
-  /** Confidence scores produced by the confidence module */
-  confidence?: ConfidenceScores;
+  /**
+   * One record per source file that contributed to this candidate.
+   * Populated by the ingest layer; never mutated after merge.
+   */
+  provenance: ProvenanceRecord[];
 
-  /** ISO-8601 timestamp of when this record was created by the pipeline */
+  /**
+   * Overall data-quality confidence: 0 (low) → 1 (high).
+   * Computed by the confidence module after merging.
+   */
+  overallConfidence: number;
+
+  /** ISO-8601 UTC timestamp: when this record was first created */
   createdAt: string;
 
-  /** ISO-8601 timestamp of the last pipeline update */
+  /** ISO-8601 UTC timestamp: when this record was last updated */
   updatedAt: string;
 }
 
 // ---------------------------------------------------------------------------
-// Source tracking
+// Partial candidate — used throughout the pipeline before the final merge
 // ---------------------------------------------------------------------------
 
-export type SourceType = 'csv' | 'resume';
-
-export interface DataSource {
-  type: SourceType;
-  /** Original file name or remote URL */
-  origin: string;
-  /** ISO-8601 timestamp of when the source was ingested */
-  ingestedAt: string;
-}
-
-// ---------------------------------------------------------------------------
-// Confidence
-// ---------------------------------------------------------------------------
-
-export interface ConfidenceScores {
-  /** Overall composite score 0–1 */
-  overall: number;
-  /** Field-level scores, keyed by Candidate field name */
-  fields: Partial<Record<keyof Candidate, number>>;
-}
+/**
+ * A partial candidate produced by a normalizer.
+ * All fields are optional; the merger will combine and fill in gaps.
+ * `candidateId`, `provenance`, `overallConfidence`, `createdAt`, and `updatedAt`
+ * are excluded — they are assigned by the pipeline, not by normalizers.
+ */
+export type NormalizedRecord = Partial<
+  Omit<Candidate, 'candidateId' | 'provenance' | 'overallConfidence' | 'createdAt' | 'updatedAt'>
+>;
 
 // ---------------------------------------------------------------------------
 // Pipeline result wrapper
@@ -143,7 +128,7 @@ export interface PipelineResult {
 }
 
 export interface PipelineError {
-  source: string;
+  sourceId: string;
   record?: unknown;
   message: string;
   code: string;

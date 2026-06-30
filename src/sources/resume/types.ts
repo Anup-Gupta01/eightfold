@@ -1,5 +1,3 @@
-import { Candidate } from '../../models/candidate';
-
 // ---------------------------------------------------------------------------
 // Raw resume data extracted by pdf-parse (before normalization)
 // ---------------------------------------------------------------------------
@@ -24,11 +22,5 @@ export interface IResumeSource {
   parse(filePath: string): Promise<RawResumeData>;
 }
 
-// ---------------------------------------------------------------------------
-// Normalized partial candidate produced by the resume normalizer
-// ---------------------------------------------------------------------------
-
-export type ResumeNormalizedRecord = Omit<
-  Partial<Candidate>,
-  'id' | 'createdAt' | 'updatedAt' | 'sources' | 'confidence'
->;
+// Use the shared NormalizedRecord type instead of a source-local one.
+export { NormalizedRecord as ResumeNormalizedRecord } from '../../models/candidate';

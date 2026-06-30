@@ -1,4 +1,3 @@
-import { Candidate } from '../../models/candidate';
 
 // ---------------------------------------------------------------------------
 // Raw CSV row — reflects actual spreadsheet columns before normalization
@@ -46,11 +45,6 @@ export interface ICsvSource {
   parse(filePath: string): Promise<RawCsvRow[]>;
 }
 
-// ---------------------------------------------------------------------------
-// Normalized partial candidate produced by the CSV normalizer
-// ---------------------------------------------------------------------------
+// Use the shared NormalizedRecord type instead of a source-local one.
+export { NormalizedRecord as CsvNormalizedRecord } from '../../models/candidate';
 
-export type CsvNormalizedRecord = Omit<
-  Partial<Candidate>,
-  'id' | 'createdAt' | 'updatedAt' | 'sources' | 'confidence'
->;

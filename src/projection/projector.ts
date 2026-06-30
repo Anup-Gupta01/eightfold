@@ -17,7 +17,7 @@ export type ProjectionSpec = Partial<Record<keyof Candidate, boolean>>;
 export interface IProjector {
   /**
    * Applies `spec` to `candidate` and returns only the requested fields.
-   * The `id`, `createdAt`, and `updatedAt` fields are always included.
+   * `candidateId`, `createdAt`, and `updatedAt` are always included.
    */
   project(candidate: Candidate, spec: ProjectionSpec): Partial<Candidate>;
 }

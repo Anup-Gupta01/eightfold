@@ -1,14 +1,12 @@
-import { Candidate } from '../models/candidate';
-import { CsvNormalizedRecord } from '../sources/csv/types';
-import { ResumeNormalizedRecord } from '../sources/resume/types';
+import { Candidate, NormalizedRecord } from '../models/candidate';
 
 // ---------------------------------------------------------------------------
-// Input to the merger — one record per source
+// Input to the merger — one normalized record per source
 // ---------------------------------------------------------------------------
 
 export interface MergeInput {
-  csvRecord?: CsvNormalizedRecord;
-  resumeRecord?: ResumeNormalizedRecord;
+  csvRecord?: NormalizedRecord;
+  resumeRecord?: NormalizedRecord;
 }
 
 // ---------------------------------------------------------------------------
