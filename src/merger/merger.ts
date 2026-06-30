@@ -1,4 +1,16 @@
-import { Candidate, NormalizedRecord } from '../models/candidate';
+// ---------------------------------------------------------------------------
+// merger.ts
+// Implements the IMerger interface using the pure mergeCandidates function.
+//
+// The Merger class is a thin adapter that converts the legacy MergeInput
+// shape (csvRecord / resumeRecord) into the generic MergeSource[] accepted
+// by mergeCandidates(), then delegates all logic there.
+// ---------------------------------------------------------------------------
+
+import type { Candidate, NormalizedRecord } from '../models/candidate';
+import type { ProvenanceRecord } from '../models/provenance';
+import { makeProvenance } from '../models/provenance';
+import { mergeCandidates, type MergeSource } from './mergeCandidates';
 
 // ---------------------------------------------------------------------------
 // Input to the merger — one normalized record per source
@@ -6,7 +18,9 @@ import { Candidate, NormalizedRecord } from '../models/candidate';
 
 export interface MergeInput {
   csvRecord?: NormalizedRecord;
+  csvProvenance?: ProvenanceRecord;
   resumeRecord?: NormalizedRecord;
+  resumeProvenance?: ProvenanceRecord;
 }
 
 // ---------------------------------------------------------------------------
@@ -16,19 +30,43 @@ export interface MergeInput {
 export interface IMerger {
   /**
    * Combines normalized records from multiple sources into a single Candidate.
-   * Conflict resolution strategy (e.g., resume-wins, most-complete-field) is
-   * determined by the implementation.
+   * CSV data has higher priority than resume data.
    */
   merge(input: MergeInput): Candidate;
 }
 
 // ---------------------------------------------------------------------------
-// Merger — skeleton implementation
+// Merger class
 // ---------------------------------------------------------------------------
 
 export class Merger implements IMerger {
-  merge(_input: MergeInput): Candidate {
-    // TODO: implement field-level merging with conflict resolution
-    throw new Error('Merger.merge() not yet implemented');
+  /**
+   * Merges CSV and resume records into a single deterministic Candidate.
+   *
+   * If provenance is not provided for a source, a default one is synthesised
+   * so that the merger always has something to attach.
+   */
+  merge(input: MergeInput): Candidate {
+    const sources: MergeSource[] = [];
+
+    if (input.csvRecord) {
+      sources.push({
+        record: input.csvRecord,
+        provenance: input.csvProvenance ?? makeProvenance('csv', 'csv-source'),
+      });
+    }
+
+    if (input.resumeRecord) {
+      sources.push({
+        record: input.resumeRecord,
+        provenance: input.resumeProvenance ?? makeProvenance('resume', 'resume-source'),
+      });
+    }
+
+    if (sources.length === 0) {
+      throw new Error('Merger.merge(): at least one of csvRecord or resumeRecord must be provided');
+    }
+
+    return mergeCandidates(sources);
   }
 }
