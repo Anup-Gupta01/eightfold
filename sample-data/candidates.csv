@@ -1,0 +1,7 @@
+First Name,Last Name,Email Address,Mobile,City,State,Country,Headline,Company,Title,Skills,LinkedIn URL,GitHub URL
+Jane,Doe,jane.doe@example.com,+1-555-0101,San Francisco,CA,US,Senior Backend Engineer,Acme Corp,Staff Engineer,"TypeScript, Node.js, PostgreSQL",https://linkedin.com/in/janedoe,https://github.com/janedoe
+John,Smith,john.smith@example.com,+1-555-0102,Austin,TX,US,Full Stack Developer,Beta Inc,Senior Developer,"React, Go, Docker",https://linkedin.com/in/johnsmith,
+Alice,Johnson,alice.j@example.com,,New York,NY,US,Data Engineer,Gamma LLC,Data Engineer,"Python, Spark, Airflow",,https://github.com/alicej
+Bob,Williams,bob.w@example.com,+1-555-0104,,,US,DevOps Engineer,,,"Kubernetes, Terraform, AWS",https://linkedin.com/in/bobw,
+,,,,,,,,,,,, 
+Carol,Davis,carol.d@example.com,+1-555-0105,Seattle,WA,US,ML Engineer,Delta Co,ML Engineer,"PyTorch, TensorFlow, Python",https://linkedin.com/in/carold,https://github.com/carold
